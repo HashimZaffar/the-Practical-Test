@@ -75,7 +75,7 @@ All web applications run in **IIS** and each uses different authentication and d
 * Cannot access live Core database; relies on a nightly copied database
 * Authentication: Token-based
 
-**[DIAGRAM PLACEHOLDER – Web Applications Overview]**
+![GeneSys Web Applications Overview](./GeneSysWebApplicationsOverview.png)
 
 ---
 
