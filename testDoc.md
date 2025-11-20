@@ -25,7 +25,7 @@ GeneSys follows a **single-tenant**, on-prem model. Each lab receives its own:
 
 This isolation ensures data privacy, reduces cross-tenant risk, and provides flexibility for labs with different product licenses.
 
-**[DIAGRAM PLACEHOLDER – High-Level Architecture Diagram]**
+![GeneSys High-Level Architecture Diagram](./GeneSysHighLevelArchitecture.png)
 
 ---
 
