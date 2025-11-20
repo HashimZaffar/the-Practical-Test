@@ -115,7 +115,7 @@ Share can only display **verified** and **approved** lab results. To ensure it n
 * When the task fails, Share displays outdated information until the next successful run.
 * Backup paths vary between environments, which introduces support challenges.
 
-**[DIAGRAM PLACEHOLDER – Nightly Copy Flow]**
+![GeneSys Nightly Copy Flow](./GeneSysNightlyCopyFlow.png)
 
 ---
 
