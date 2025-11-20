@@ -161,7 +161,7 @@ Below is a simplified view of how data moves between components:
 * BioBridge uses this file to refresh Share once per day.
 * Ensures Share exposes only validated results.
 
-**[DIAGRAM PLACEHOLDER – Full Data Flow Diagram]**
+![GeneSys Nightly Copy Flow](./GeneSysFinalArchitectureDiagram.png)
 
 ---
 
