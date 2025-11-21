@@ -1,109 +1,129 @@
 
 ---
 
-# GeneSys Research Suite: System Overview
+# GeneSys Research Suite
+
+## System Overview (Internal Use)
 
 ## Document Control
 
-| Field                 | Detail                         |
-| --------------------- | ------------------------------ |
-| Document Version      | 1.0                            |
-| Last Updated          | November 2025                  |
-| Author                | Hashim Zaffar                  |
-| Reviewed By           | —                              |
-| Approved By           | —                              |
-| Document Status       | Draft / Approved / Final       |
-| Confidentiality Level | Internal / Restricted / Public |
+| Field                 | Detail        |
+| --------------------- | ------------- |
+| Document Version      | 1.1           |
+| Last Updated          | November 2025 |
+| Author                | Hashim Zaffar |
+| Reviewed By           | —             |
+| Approved By           | —             |
+| Document Status       | Draft         |
+| Confidentiality Level | Internal      |
 
 ---
 
-This document provides a concise overview of the GeneSys Research Suite for internal teams including Support, Customer Success, and QA. It explains the role of each product, how data flows between components, and the operational design choices that shape the platform. It assumes technical familiarity but does not require software development experience.
+## 1. Purpose of This Document
+
+This document provides a structured, high-level overview of the **GeneSys Research Suite** for Support, Customer Success, and QA teams. It explains:
+
+* Each system component and its role
+* How data moves between applications
+* Why the platform uses both real-time and snapshot-based data flows
+* Authentication models and hosting architecture
+* Common operational considerations and troubleshooting points
+
+Technical familiarity with Windows Server and SQL is helpful but not required.
 
 ---
 
-# 1. Deployment Model and Hosting
+# 2. Architecture & Deployment Model
 
-The GeneSys ecosystem uses a **single-tenant, on-premise model**:
+## 2.1 Single-Tenant, On-Premise Design
 
-* Each client receives its own Windows Server, SQL Server database, and IIS-hosted web applications.
-* No infrastructure is shared between clients.
-* Environments aim for approximately 90 percent standardization, although product licensing and historical configurations introduce variation.
+The GeneSys ecosystem follows a **single-tenant architecture**, meaning:
 
-Core components installed on each server:
+* Each client receives its **own Windows Server**, SQL Server database, and IIS-hosted applications.
+* Components do not share infrastructure across clients.
+* Environments target ~90% standardization, but differences arise due to licensing, legacy setups, and custom configurations.
 
-* Microsoft SQL Server
-* IIS (Internet Information Services)
-* GeneSys Core application
-* Optional web apps: Portal, Insight, Share
-* BioBridge Windows Service
-* Windows Scheduled Tasks (nightly database copy, hourly sync)
+This model ensures data isolation, predictable troubleshooting, and simplified compliance.
 
----
+## 2.2 Standard Installed Components
 
-# 2. System Components
-
-## 2.1 GeneSys Core
-
-* Used by scientists to record samples, sequencing runs, and laboratory results.
-* Runs directly on the client’s Windows Server and stores all operational data in SQL Server.
-* Authentication: Windows Authentication (Active Directory or local accounts).
-
-## 2.2 Web Applications (IIS-hosted)
-
-### GeneSys Portal
-
-* Used by researchers to submit sequencing requests and check project status.
-* Communicates directly with Core using REST APIs.
-* Authentication: OAuth 2.0
-* Does not use BioBridge.
-
-### GeneSys Insight
-
-* Analytics and visualization dashboard for experiment results.
-* Receives hourly updates that BioBridge pushes from Core.
-* Authentication: API Keys
-
-### GeneSys Share
-
-* Used to distribute sanitized and validated results to external collaborators.
-* Reads from a nightly copy of the Core database rather than the live system.
-* Authentication: Token-based
-* Ensures external users never see incomplete or unverified data.
+| Component             | Required?        | Description                                                       |
+| --------------------- | ---------------- | ----------------------------------------------------------------- |
+| **GeneSys Core**      | ✔ Yes            | Primary application for lab scientists; authoritative data source |
+| **Portal**            | Optional         | Used for request submission                                       |
+| **Insight**           | Optional         | Analytics dashboard                                               |
+| **Share**             | Optional         | External-facing results portal                                    |
+| **BioBridge Service** | ✔ Yes            | Synchronization engine for Insight & Share                        |
+| **Nightly Copy Task** | If Share enabled | Produces read-only snapshot for Share                             |
 
 ---
 
-# 3. BioBridge Service (formerly “BioSync”)
+# 3. Component Overview
 
-BioBridge is a Windows Service responsible for automated data movement between systems.
+## 3.1 GeneSys Core
 
-Primary responsibilities:
+The central hub of the ecosystem.
 
-* Hourly: Push Core data to Insight
-* Nightly: Load the copied database generated by the backup task and update Share
+* Runs on Windows Server
+* Stores all operational data in SQL Server
+* Uses **Windows Authentication**
+* Serves as the **system of record**
+* Powers Portal real-time operations and acts as the source for Insight and Share data
 
-Naming notes:
+## 3.2 IIS Web Applications
 
-* Current name: BioBridge Service
-* Legacy names: BioSync, Bridge Sync, Integration Layer
-* Older environments and support tickets may still reference these historical terms.
+### **GeneSys Portal**
 
-Portal does not depend on BioBridge.
+A researcher-facing interface for sequencing requests and project tracking.
+
+* Communicates directly with Core using **two-way REST APIs**
+* Authentication: **OAuth 2.0**
+* **Does not use BioBridge**
+
+### **GeneSys Insight**
+
+Interactive dashboards for analytics and experiment performance.
+
+* Receives **hourly** data updates via BioBridge
+* Authentication: **API Keys**
+
+### **GeneSys Share**
+
+External portal for delivering sanitized, validated results to collaborators.
+
+* Uses the **nightly snapshot** of Core data
+* Authentication: **Token-based**
+* Completely isolated from live Core data to avoid exposing in-progress or unvalidated work
 
 ---
 
-# 4. System Data Flow
+# 4. BioBridge Service
 
-Different products interact with Core through different mechanisms:
+**BioBridge** (also historically called *BioSync*, *Bridge Sync*, or *Integration Layer*) is a Windows Service responsible for data synchronization across GeneSys components.
 
-* Portal ↔ Core: Two-way REST API communication
-* Core → Insight: Hourly data push through BioBridge
-* Core → Nightly Copy → BioBridge → Share: Daily update cycle
+### Core Responsibilities
 
-### Diagram 1: High-Level Data Flow
+| Operation                 | Frequency | Purpose                             |
+| ------------------------- | --------- | ----------------------------------- |
+| **Core → Insight Sync**   | Hourly    | Populate Insight’s analytics tables |
+| **Core_Copy.bak → Share** | Nightly   | Refresh Share’s read-only data      |
+
+Portal bypasses BioBridge entirely and uses direct REST integration.
+
+---
+
+# 5. Data Flow Overview
+
+GeneSys uses two complementary data flow models:
+
+* **Real-time (Portal):** Direct interaction with Core for workflow updates
+* **Near real-time (Insight):** Hourly syncs to balance timeliness with server load
+* **Delayed snapshot (Share):** Nightly copies to guarantee data integrity
+
+### High-Level Data Flow Diagram
 
 ```mermaid
 flowchart LR
-    %% Styling
     classDef core fill:#4c8bf5,stroke:#1b4db3,color:white
     classDef portal fill:#6cc24a,stroke:#3d7b23,color:white
     classDef insight fill:#f4b400,stroke:#b88600,color:white
@@ -111,42 +131,54 @@ flowchart LR
     classDef bridge fill:#7e57c2,stroke:#4e2a90,color:white
     classDef copy fill:#5c6bc0,stroke:#2c387e,color:white
 
-    Portal[GeneSys Portal]:::portal
-    Core[GeneSys Core<br/>SQL Server]:::core
-    Insight[GeneSys Insight]:::insight
-    Share[GeneSys Share]:::share
+    Portal[Portal]:::portal
+    Core[GeneSys Core<br/>SQL Database]:::core
+    Insight[Insight]:::insight
+    Share[Share]:::share
     CopyTask[Nightly Copy<br/>Core_Copy.bak]:::copy
     Bridge[BioBridge Service]:::bridge
 
     Portal <--> Core
     Core -->|Hourly Sync| Bridge --> Insight
-    Core -->|1 AM Backup| CopyTask --> Bridge --> Share
+    Core -->|1 AM Snapshot| CopyTask --> Bridge --> Share
 ```
+
+### Summary Table
+
+| Product     | Data Source   | Method                 |
+| ----------- | ------------- | ---------------------- |
+| **Portal**  | Live Core     | REST API (two-way)     |
+| **Insight** | Core          | BioBridge hourly push  |
+| **Share**   | Core_Copy.bak | BioBridge nightly load |
 
 ---
 
-# 5. Nightly Database Copy (Share Data Pipeline)
+# 6. Nightly Copy Task (Share Data Pipeline)
 
-Share does not connect to the live Core database because external users must only see validated results. To ensure data integrity:
+Because Share is externally accessible, it cannot expose live, unreviewed data. Therefore:
 
-* A Windows Scheduled Task runs nightly at 1:00 AM.
-* It produces a SQL backup file named `Core_Copy.bak`.
-* BioBridge reads the backup file and updates Share based on the snapshot.
+### Nightly Workflow (1:00 AM)
 
-Operational issues observed:
+1. **Windows Scheduled Task** triggers the database backup.
+2. SQL Server generates **Core_Copy.bak**, a full snapshot of the Core database.
+3. **BioBridge** reads this snapshot.
+4. Share’s database is refreshed based on the copied data.
 
-* Disk space shortages can prevent backup creation.
-* Backup paths differ across client environments, for example:
+This ensures that Share displays only validated, finalized results.
 
-  * `D:\BioBridge\Copies\Core_Copy.bak`
-  * `E:\GeneSys\Backup\Core_Copy.bak`
-* Misconfigurations may cause Share to display outdated results.
+### Common Issues
 
-### Diagram 2: Nightly Copy and Share Update Process
+* **Disk exhaustion** leading to backup failure
+* Backup file stored in inconsistent paths:
+
+  * `D:\BioBridge\Copies\Core_Copy.bak` (recommended standard)
+  * `E:\GeneSys\Backup\Core_Copy.bak` (historical)
+* If the task fails, Share remains stale until the next successful run
+
+### Nightly Copy Diagram
 
 ```mermaid
 flowchart TB
-    %% Styling
     classDef task fill:#5c6bc0,stroke:#2c387e,color:white
     classDef core fill:#4c8bf5,stroke:#1b4db3,color:white
     classDef bridge fill:#7e57c2,stroke:#4e2a90,color:white
@@ -154,64 +186,61 @@ flowchart TB
 
     Core[Core Database]:::core
     Task[Nightly Copy Task<br/>1:00 AM]:::task
-    Backup[Core_Copy.bak<br/>Snapshot Copy]:::task
-    Bridge[BioBridge Service]:::bridge
-    Share[Share Application]:::share
+    Backup[Core_Copy.bak<br/>Snapshot]:::task
+    Bridge[BioBridge<br/>Nightly Load]:::bridge
+    ShareApp[Share Application]:::share
 
-    Core --> Task --> Backup --> Bridge --> Share
-
-    Task -.->|If fails| Share
+    Core --> Task --> Backup --> Bridge --> ShareApp
+    Task -.->|If backup fails| ShareApp
 ```
 
 ---
 
-# 6. Authentication Overview
+# 7. Authentication Overview
 
-| Component | Authentication Method  | Notes                                 |
-| --------- | ---------------------- | ------------------------------------- |
-| Core      | Windows Authentication | Uses domain or local Windows accounts |
-| Portal    | OAuth 2.0              | Used by researchers                   |
-| Insight   | API Keys               | Machine-to-machine communication      |
-| Share     | Token-based            | Lightweight external access           |
-
----
-
-# 7. Naming and Terminology Standards
-
-To maintain consistency:
-
-* Use “BioBridge Service” as the canonical term in all internal documentation.
-* When reviewing logs or older deployments, note that BioSync, Bridge Sync, and Integration Layer refer to the same underlying service.
-* Recommended standard backup path:
-  `D:\BioBridge\Copies\Core_Copy.bak`
-  (Client environments may deviate.)
+| Component   | Method                 | Notes                               |
+| ----------- | ---------------------- | ----------------------------------- |
+| **Core**    | Windows Authentication | Uses AD or local accounts           |
+| **Portal**  | OAuth 2.0              | Researcher-facing                   |
+| **Insight** | API Keys               | Service-to-service access           |
+| **Share**   | Token-based            | Lightweight external authentication |
 
 ---
 
-# 8. Known Variations and Support Considerations
+# 8. Support & Operational Considerations
 
-* Some labs deploy only Insight, only Portal, or combinations such as Insight + Share.
+* Share updates **only** through the nightly snapshot, not the hourly sync.
+* Portal issues typically involve **Core API**, not BioBridge.
+* The nightly copy task failing is the **most common cause** of stale data in Share.
+* Legacy terminology (BioSync, Bridge Sync) may still appear in older environments or tickets.
+* Standardizing backup paths reduces misconfigurations during provisioning.
 
-* Backup tasks commonly fail due to insufficient disk space.
+### Recommended Standards
 
-* Support teams often encounter confusion regarding Share updates:
+* Canonical service name: **BioBridge Service**
+* Backup path: **D:\BioBridge\Copies\Core_Copy.bak**
+* Default IIS ports:
 
-  * Share is updated through the nightly database copy and BioBridge, not through the hourly sync.
-
-* Portal is the only product that bypasses BioBridge.
+  * Portal: 8080
+  * Insight: 8081
+  * Share: 8082
 
 ---
 
-# 9. Assumptions
+# 9. Audience
 
-To maintain consistency in this overview, the following assumptions are made:
+This document is intended for:
 
-1. BioBridge is the official and supported name; BioSync is deprecated.
-2. The intended backup directory is `D:\BioBridge\Copies\`, with exceptions handled case-by-case.
-3. Standard IIS port assignments (unless overridden):
+* **Support** teams diagnosing client issues
+* **Customer Success** teams provisioning or configuring environments
+* **QA** teams validating data flows and product interactions
 
-   * 8080 Portal
-   * 8081 Insight
-   * 8082 Share
-4. Share never connects to the live Core database.
-5. BioBridge handles both hourly Insight syncing and nightly Share updates.
+---
+
+# 10. Assumptions
+
+1. BioBridge is the current supported name for the synchronization service.
+2. Share never connects to the live Core database.
+3. The nightly snapshot is always the source of truth for Share.
+4. IIS port defaults apply unless specified per client.
+5. Each client operates an independent, single-tenant environment.
