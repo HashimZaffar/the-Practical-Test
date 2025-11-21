@@ -1,7 +1,7 @@
 
 ---
 
-# GeneSys Research Suite — System Overview (Internal Use)
+# GeneSys Research Suite — System Overview
 
 ## Document Control
 
