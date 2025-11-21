@@ -215,11 +215,3 @@ To maintain consistency in this overview, the following assumptions are made:
    * 8082 Share
 4. Share never connects to the live Core database.
 5. BioBridge handles both hourly Insight syncing and nightly Share updates.
-
----
-
-# 10. Appendix (Optional)
-
-* Deployment checklist references
-* Common Task Scheduler error codes
-* Log excerpts demonstrating BioBridge operations
