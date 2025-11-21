@@ -159,7 +159,7 @@ The CS team manually provisions each customer environment. Although ~90% standar
 
 The following assumptions are based on internal logs and support material:
 
-* “BioBridge,” “BioSync,” and “Bridge Sync” all refer to the **same Windows Service**.
+* “BioBridge,” “BioSync,” and “Bridge Sync” all refer to the same Windows Service.
 * Share uses only the nightly copy; it never connects to Core directly.
 * Authentication methods listed represent intended design; older deployments may differ.
 * Backup path standardization is an ongoing initiative; paths vary today.
