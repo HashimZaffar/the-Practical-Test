@@ -99,7 +99,7 @@ Different products interact with Core through different mechanisms:
 * Core → Insight: Hourly data push through BioBridge
 * Core → Nightly Copy → BioBridge → Share: Daily update cycle
 
-### Diagram 1 — High-Level Data Flow (GitHub-friendly Mermaid)
+### Diagram 1 — High-Level Data Flow
 
 ```mermaid
 flowchart LR
